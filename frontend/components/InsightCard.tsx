@@ -1,9 +1,10 @@
 import { Insight } from '@/lib/api';
 import { useState, useEffect } from 'react';
-import { FaCopy, FaCheck } from 'react-icons/fa';
+import { FaCopy, FaCheck, FaTrash } from 'react-icons/fa';
 
 interface InsightCardProps {
   insight: Insight;
+  onDelete?: (id: number) => void;
 }
 
 const sentimentColors = {
@@ -12,7 +13,7 @@ const sentimentColors = {
   neutral: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300',
 };
 
-export default function InsightCard({ insight }: InsightCardProps) {
+export default function InsightCard({ insight, onDelete }: InsightCardProps) {
   const [copied, setCopied] = useState(false);
   const formattedDate = new Date(insight.created_at).toLocaleDateString('en-US', {
     month: 'short',
@@ -24,6 +25,12 @@ export default function InsightCard({ insight }: InsightCardProps) {
   const copyToClipboard = () => {
     navigator.clipboard.writeText(insight.summary);
     setCopied(true);
+  };
+
+  const handleDelete = () => {
+    if (onDelete) {
+      onDelete(insight.id);
+    }
   };
 
   useEffect(() => {
@@ -44,16 +51,25 @@ export default function InsightCard({ insight }: InsightCardProps) {
         </span>
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-500 dark:text-gray-400">{formattedDate}</span>
-          <button
+          <button 
             onClick={copyToClipboard}
             className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
             aria-label="Copy summary to clipboard"
           >
             {copied ? <FaCheck className="text-green-500" /> : <FaCopy />}
           </button>
+          {onDelete && (
+            <button
+              onClick={handleDelete}
+              className="p-2 text-gray-500 hover:text-red-500 dark:text-gray-400 dark:hover:text-red-400 transition-colors"
+              aria-label="Delete insight"
+            >
+              <FaTrash />
+            </button>
+          )}
         </div>
       </div>
-
+      
       {/* Summary */}
       <p className="text-gray-700 dark:text-gray-300 mb-4 leading-relaxed">
         {insight.summary}
@@ -62,8 +78,8 @@ export default function InsightCard({ insight }: InsightCardProps) {
       {/* Themes */}
       <div className="flex flex-wrap gap-2 mb-4">
         {insight.themes.map((theme, idx) => (
-          <span
-            key={idx}
+          <span 
+            key={idx} 
             className="px-3 py-1 text-sm bg-blue-50 text-blue-700 rounded-full dark:bg-blue-900/30 dark:text-blue-400"
           >
             {theme}
@@ -75,12 +91,7 @@ export default function InsightCard({ insight }: InsightCardProps) {
       <div className="pt-3 border-t border-gray-100 dark:border-gray-800">
         <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-2">
           {insight.source_url ? (
-            <a
-              href={insight.source_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-600 hover:underline"
-            >
+            <a href={insight.source_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
               {insight.source_url}
             </a>
           ) : (
