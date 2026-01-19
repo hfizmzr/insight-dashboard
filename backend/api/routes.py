@@ -1,11 +1,8 @@
 """API routes for insight analysis."""
-
 import json
 from typing import Optional
-
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import Session, select
-
 from database import get_session
 from models.insight import Insight, InsightCreate, InsightResponse
 from services.llm_service import llm_service
@@ -13,18 +10,14 @@ from services.scraper_service import scraper_service
 
 router = APIRouter(tags=["insights"])
 
-
 @router.post("/analyze", response_model=InsightResponse)
 async def analyze_content(
     request: InsightCreate,
     session: Session = Depends(get_session),
 ):
-    """
+    """ 
     Analyze text or URL content to extract insights.
-
-    Accepts either raw text or a URL. If a URL is provided,
-    the content will be fetched and analyzed.
-
+    Accepts either raw text or a URL. If a URL is provided, the content will be fetched and analyzed.
     Returns the analysis with sentiment, themes, and summary.
     """
     # Validate input
@@ -33,7 +26,7 @@ async def analyze_content(
             status_code=400,
             detail="Either 'text' or 'url' must be provided",
         )
-
+    
     source_text = request.text or ""
     source_url = request.url
 
@@ -48,7 +41,7 @@ async def analyze_content(
                 status_code=500,
                 detail=f"Failed to fetch URL content: {str(e)}",
             )
-
+    
     if not source_text.strip():
         raise HTTPException(
             status_code=400,
@@ -73,7 +66,6 @@ async def analyze_content(
         sentiment_score=analysis.sentiment_score,
         themes=json.dumps(analysis.themes),
     )
-
     session.add(insight)
     session.commit()
     session.refresh(insight)
@@ -90,7 +82,6 @@ async def analyze_content(
         created_at=insight.created_at,
     )
 
-
 @router.get("/insights", response_model=list[InsightResponse])
 async def list_insights(
     session: Session = Depends(get_session),
@@ -98,9 +89,8 @@ async def list_insights(
     limit: int = Query(50, ge=1, le=100, description="Maximum records to return"),
     search: Optional[str] = Query(None, description="Search term for filtering"),
 ):
-    """
+    """ 
     Get list of all analyzed insights.
-
     Supports pagination with skip/limit and optional search filtering.
     """
     query = select(Insight).order_by(Insight.created_at.desc())
@@ -109,14 +99,13 @@ async def list_insights(
     if search:
         search_term = f"%{search}%"
         query = query.where(
-            Insight.source_text.ilike(search_term)
-            | Insight.summary.ilike(search_term)
-            | Insight.themes.ilike(search_term)
+            Insight.source_text.ilike(search_term) |
+            Insight.summary.ilike(search_term) |
+            Insight.themes.ilike(search_term)
         )
 
     # Apply pagination
     query = query.offset(skip).limit(limit)
-
     insights = session.exec(query).all()
 
     # Convert to response format
@@ -134,7 +123,6 @@ async def list_insights(
         for insight in insights
     ]
 
-
 @router.get("/insights/{insight_id}", response_model=InsightResponse)
 async def get_insight(
     insight_id: int,
@@ -142,10 +130,9 @@ async def get_insight(
 ):
     """Get a specific insight by ID."""
     insight = session.get(Insight, insight_id)
-
     if not insight:
         raise HTTPException(status_code=404, detail="Insight not found")
-
+    
     return InsightResponse(
         id=insight.id,
         source_text=insight.source_text,
@@ -156,3 +143,17 @@ async def get_insight(
         themes=json.loads(insight.themes),
         created_at=insight.created_at,
     )
+
+@router.delete("/insights/{insight_id}", status_code=204)
+async def delete_insight(
+    insight_id: int,
+    session: Session = Depends(get_session),
+):
+    """Delete a specific insight by ID."""
+    insight = session.get(Insight, insight_id)
+    if not insight:
+        raise HTTPException(status_code=404, detail="Insight not found")
+    
+    session.delete(insight)
+    session.commit()
+    return
