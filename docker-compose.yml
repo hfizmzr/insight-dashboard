@@ -4,16 +4,24 @@ services:
     ports:
       - "8000:8000"
     volumes:
+      - ./backend:/app
       - ./data:/app/data
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
     env_file:
       - .env
     environment:
       - DATABASE_URL=sqlite:///./data/insights.db
 
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      target: development
     ports:
       - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
     environment:
       - NEXT_PUBLIC_API_URL=http://localhost:8000
     depends_on:
